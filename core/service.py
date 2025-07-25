@@ -37,11 +37,7 @@ class ContextCore:
         threshold = 0.7  # 可以根据实际需求调整阈值
         filtered_res: List[RetriveResult] = [item for item in res if getattr(item, "score", 0) >= threshold]
         
-        
-        # 将filtered_res拼接为字符串
-        filtered_text = "\n".join([getattr(item, "content", "") for item in filtered_res])
-        self.filter.filter_for_storage(filtered_text)
-        
+        filtered_text = self.filter.filter_retrieved_context(filtered_res)
         
         privacy_label = self.privacy.classify(filtered_text)
         level = privacy_label.level

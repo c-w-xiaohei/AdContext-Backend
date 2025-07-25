@@ -1,3 +1,6 @@
+from typing import List
+from schemas.common import RetriveResult
+
 class FilterService:
     """
     上下文相关性过滤Agent
@@ -6,7 +9,7 @@ class FilterService:
     def filter_retrieved_context(
         self,
         user_talk: str,
-        context: str
+        context: List[RetriveResult]
     ) -> str:
         """
         使用LLM Re-ranking等技术，从候选片段中筛选出与用户当前对话最相关的部分。
