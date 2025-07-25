@@ -1,7 +1,7 @@
-from schemas.common import ContextFragment, RetriveResult
+from schemas.common import RetriveResult
 # 导入所有需要的服务
 from storage.service import StorageService
-from services.privacy import PrivacyService
+from services.privacy import PrivacyClassifier
 from services.filter import FilterService
 from services.authorization import AuthorizationService
 from typing import List
@@ -14,15 +14,15 @@ class ContextCore:
     def __init__(
         self,
         storage_service: StorageService,
-        privacy_service: PrivacyService,
+        privacy_classifier: PrivacyClassifier,
         filter_service: FilterService,
         # authorization_service: AuthorizationService,
     ):
         """通过依赖注入初始化所有需要的服务实例"""
         self.storage = storage_service
-        self.privacy = privacy_service
+        self.privacy = privacy_classifier
         self.filter = filter_service
-        self.auth = authorization_service
+        # self.auth = authorization_service
 
     async def query(self, text) -> None:
         """
@@ -43,7 +43,8 @@ class ContextCore:
         self.filter.filter_for_storage(filtered_text)
         
         
-        level = self.privacy.classify(filtered_text)
+        privacy_label = self.privacy.classify(filtered_text)
+        level = privacy_label.level
         
         
         return filtered_text
@@ -59,12 +60,18 @@ class ContextCore:
             一个字符串，作为最终的上下文返回给AI。
         """
         self.filter.filter_for_storage(text)
-        level = self.privacy.check(text)
+        privacy_label = self.privacy.classify(text)
+        level = privacy_label.level
         self.storage.add(text,level)
         
         
+# 注意: 这是一个示例实例化。在生产环境中，您应该从安全的配置中加载服务，
+# 例如，通过一个主应用工厂函数来初始化所有服务和依赖。
 context_core = ContextCore(
-    StorageService(),
-    PrivacyService(),
-    FilterService(),
+    storage_service=StorageService(),
+    # PrivacyClassifier现在需要API密钥。
+    # 为了使应用可以启动，这里使用了一个占位符。
+    # 在实际部署中，请务必通过环境变量或安全的配置管理来提供真实的密钥。
+    privacy_classifier=PrivacyClassifier(api_key="YOUR_AIHUBMIX_API_KEY_HERE"),
+    filter_service=FilterService(),
 )

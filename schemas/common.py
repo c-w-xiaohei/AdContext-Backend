@@ -1,10 +1,10 @@
 from pydantic import BaseModel, Field
-from schemas.privacy import PrivacyLabel
+from schemas.privacy import PrivacyLevel
 
 class Metadata(BaseModel):
     """存储在mem0中的元数据结构"""
-    privacy_level: PrivacyLabel
-    source:str
+    privacy_level: PrivacyLevel
+    source: str
     
 class RetriveResult(BaseModel):
     """

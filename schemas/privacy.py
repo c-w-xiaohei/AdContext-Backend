@@ -1,8 +1,23 @@
+from datetime import datetime
 from enum import Enum
+from dataclasses import dataclass
+from typing import Optional, List
 
-class PrivacyLabel(str, Enum):
-    """上下文片段的隐私等级"""
-    PUBLIC = "PUBLIC"          # 完全公开信息
-    PERSONAL = "PERSONAL"      # 个人但非敏感信息，如偏好
-    CONFIDENTIAL = "CONFIDENTIAL" # 机密信息，如项目细节、非公开对话
-    SENSITIVE = "SENSITIVE"    # 高度敏感信息，如PII、密码、密钥
+
+class PrivacyLevel(Enum):
+    """隐私敏感度级别枚举"""
+    LEVEL_1_PUBLIC = 1          # 公开可检索 (Non-Sensitive)
+    LEVEL_2_INTERNAL = 2        # 内部日常 (Low)
+    LEVEL_3_RESTRICTED = 3      # 受限敏感 (Moderate)  
+    LEVEL_4_CONFIDENTIAL = 4    # 机密/合规管控 (Confidential)
+    LEVEL_5_CRITICAL = 5        # 极端敏感/关键凭证 (Critical)
+
+
+@dataclass
+class PrivacyLabel:
+    """隐私标签数据结构"""
+    level: PrivacyLevel
+    confidence: float           # 置信度 (0.0-1.0)
+    reasoning: str              # 分级理由
+    risk_indicators: List[str]  # 风险指标
+    compliance_notes: Optional[str] = None  # 合规注释
