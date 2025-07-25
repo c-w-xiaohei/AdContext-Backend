@@ -40,11 +40,13 @@ class StorageService:
                 messages, 
                 user_id=self.DEFAULT_USER_ID, 
                 output_format="v1.1", 
-                metadata=metadata_dict  # 传递字典而不是对象
+                metadata=metadata_dict, # 传递字典而不是对象
+                infer = True
             )
             
-            # 返回添加成功的消息
-            msg = f"ad-context记忆成功: {text}"
+            print(result)
+            # 返回添加成功的消息，包含memory字段
+            msg = "ad-context记忆成功"
             return msg
         except Exception as e:
             return f"ad-context记忆失败: {str(e)}"
