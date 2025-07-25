@@ -37,7 +37,7 @@ class ContextCore:
         threshold = 0.7  # 可以根据实际需求调整阈值
         filtered_res: List[RetriveResult] = [item for item in res if getattr(item, "score", 0) >= threshold]
         
-        filtered_text = self.filter.filter_retrieved_context(filtered_res)
+        filtered_text = self.filter.filter_retrieved_context(text, filtered_res)
         
         privacy_label = self.privacy.classify(filtered_text)
         level = privacy_label.level
@@ -69,5 +69,5 @@ context_core = ContextCore(
     # 为了使应用可以启动，这里使用了一个占位符。
     # 在实际部署中，请务必通过环境变量或安全的配置管理来提供真实的密钥。
     privacy_classifier=PrivacyClassifier(api_key="YOUR_AIHUBMIX_API_KEY_HERE"),
-    filter_service=FilterService(),
+    filter_service=FilterService(api_key="YOUR_AIHUBMIX_API_KEY_HERE"),
 )
