@@ -1,0 +1,70 @@
+{
+  "name": "AD-Context",
+  "instructions": null,
+  "fastmcp_version": "2.10.6",
+  "mcp_version": "1.12.2",
+  "server_version": "2.10.6",
+  "tools": [
+    {
+      "key": "add_memory",
+      "name": "add_memory",
+      "description": "将用户记忆添加到 AD-Context 中。此工具存储用户的个人信息、偏好、习惯、学习与知识偏好、认知模式与沟通风格、历史互动与核心记忆。\n    \n    功能特性：\n    - 支持语义索引和检索\n    - 自动推理和提取关键信息\n    - 支持隐私级别控制\n    - 支持元数据标记\n    \n    存储每个记忆时，您应包括：\n    - 个人信息（姓名、年龄、性别、地区、职业、教育背景等）\n    - 偏好（色彩偏好、设计风格、时尚/穿衣风格、音乐品味、阅读偏好等）\n    - 习惯（作息规律、生活习惯、工作习惯、运动习惯等）\n    - 学习与知识偏好（学习方式、特别感兴趣的知识主题、技能水平等）\n    - 认知模式与沟通风格（思维模式、沟通风格、决策方式、问题解决方法等）\n    - 历史互动与核心记忆（关键对话与共识、重要事件、里程碑等）\n    - 目标与计划（短期目标、长期规划、项目计划等）\n    \n    该记忆将被索引以进行语义搜索，并可稍后使用自然语言查询进行检索。\n    支持的隐私级别：LEVEL_1_PUBLIC（公开）、LEVEL_2_INTERNAL（内部）、LEVEL_3_CONFIDENTIAL（机密）、LEVEL_4_RESTRICTED（限制）、LEVEL_5_TOP_SECRET（绝密）。\n    ",
+      "input_schema": {
+        "properties": {
+          "text": {
+            "title": "Text",
+            "type": "string"
+          }
+        },
+        "required": [
+          "text"
+        ],
+        "type": "object"
+      },
+      "annotations": null,
+      "tags": null,
+      "enabled": true
+    },
+    {
+      "key": "search_memory",
+      "name": "search_memory",
+      "description": "使用语义搜索在 AD-Context 中搜索已存储的记忆。此工具能够根据查询文本找到最相关的记忆片段。\n    \n    功能特性：\n    - 基于语义理解的智能搜索\n    - 支持自然语言查询\n    - 可配置返回结果数量\n    - 支持元数据过滤\n    - 返回相关性评分\n    \n    适用场景：\n    - 查找特定的个人信息或偏好\n    - 搜索相关的历史对话或事件\n    - 检索特定主题的知识和经验\n    - 查找相似的习惯或行为模式\n    - 搜索特定时间段或来源的记忆\n    \n    搜索支持：\n    - 模糊匹配和语义理解\n    - 多关键词组合查询\n    - 上下文相关性分析\n    - 同义词和相关概念匹配\n    \n    返回结果包含：\n    - 匹配的记忆内容\n    - 相关性评分\n    - 元数据信息（隐私级别、来源等）\n    - 创建时间等附加信息\n    ",
+      "input_schema": {
+        "properties": {
+          "query_text": {
+            "title": "Query Text",
+            "type": "string"
+          },
+          "top_k": {
+            "default": 5,
+            "title": "Top K",
+            "type": "integer"
+          }
+        },
+        "required": [
+          "query_text"
+        ],
+        "type": "object"
+      },
+      "annotations": null,
+      "tags": null,
+      "enabled": true
+    }
+  ],
+  "prompts": [],
+  "resources": [],
+  "templates": [],
+  "capabilities": {
+    "tools": {
+      "listChanged": true
+    },
+    "resources": {
+      "subscribe": false,
+      "listChanged": false
+    },
+    "prompts": {
+      "listChanged": false
+    },
+    "logging": {}
+  }
+}

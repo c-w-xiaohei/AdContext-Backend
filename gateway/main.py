@@ -1,14 +1,8 @@
-from mcp.server.fastmcp import FastMCP
-from starlette.applications import Starlette
-from mcp.server.sse import SseServerTransport
-from starlette.requests import Request
-from starlette.routing import Mount, Route
-from mcp.server import Server
-import uvicorn
+from fastmcp import FastMCP  # 修正导入语句
 from mem0 import MemoryClient
 from dotenv import load_dotenv
 import json
-from .prompt import CUSTOM_INSTRUCTIONS
+from gateway.prompt import CUSTOM_INSTRUCTIONS  # 修改为绝对导入
 
 from storage.service import StorageService
 
@@ -182,141 +176,20 @@ async def search_memory(query_text: str, top_k: int = 5) -> str:
         return f"Error searching memories: {str(e)}"
 
 
-# @mcp.tool(
-#     description="""列出 AD-Context 中存储的所有记忆。此工具提供记忆的完整列表，支持分页和过滤功能。
-    
-#     功能特性：
-#     - 获取所有已存储的记忆列表
-#     - 支持结果数量限制
-#     - 支持元数据过滤
-#     - 返回完整的记忆信息和元数据
-    
-#     适用场景：
-#     - 查看所有存储的记忆概览
-#     - 管理和审查记忆内容
-#     - 分析记忆存储模式
-#     - 进行记忆内容的批量操作准备
-#     - 检查特定来源或隐私级别的记忆
-    
-#     返回信息包含：
-#     - 记忆的完整内容
-#     - 创建时间和更新时间
-#     - 元数据信息（隐私级别、来源等）
-#     - 记忆的唯一标识符
-#     - 记忆的分类和标签信息
-    
-#     过滤选项：
-#     - 按隐私级别过滤
-#     - 按来源类型过滤
-#     - 按创建时间范围过滤
-#     - 按内容类型过滤
-#     """
-# )
-# async def list_memories(limit: int = 100) -> str:
-#     """列出 AD-Context 中的所有记忆
-    
-#     获取已存储记忆的完整列表，包含详细的元数据信息。
-    
-#     参数：
-#         limit: 返回结果的最大数量，默认为100
-    
-#     返回：
-#         str: JSON格式的记忆列表，包含内容、元数据和标识符信息
-#     """
-#     try:
-#         storage_service = StorageService()
-#         memories = storage_service.list(limit=limit)
-        
-#         return json.dumps(memories, indent=2, ensure_ascii=False)
-#     except Exception as e:
-#         return f"Error listing memories: {str(e)}"
-
-
-# @mcp.tool(
-#     description="""从 AD-Context 中删除指定的记忆。此工具允许永久删除不再需要的记忆内容。
-    
-#     功能特性：
-#     - 根据记忆ID精确删除
-#     - 永久性删除操作
-#     - 返回删除操作结果
-#     - 支持删除确认
-    
-#     使用场景：
-#     - 删除过时或错误的记忆
-#     - 清理不再相关的信息
-#     - 管理存储空间
-#     - 维护记忆数据的准确性
-#     - 遵守数据保护和隐私要求
-    
-#     注意事项：
-#     - 删除操作不可逆转
-#     - 需要提供准确的记忆ID
-#     - 删除后相关的搜索结果将不再包含该记忆
-#     - 建议在删除前先通过list_memories确认要删除的内容
-    
-#     安全考虑：
-#     - 确保有删除权限
-#     - 验证记忆ID的正确性
-#     - 考虑删除对其他相关记忆的影响
-#     """
-# )
-# async def delete_memory(memory_id: str) -> str:
-#     """从 AD-Context 中删除指定记忆
-    
-#     根据记忆ID永久删除指定的记忆内容。
-    
-#     参数：
-#         memory_id: 要删除的记忆的唯一标识符
-    
-#     返回：
-#         str: JSON格式的删除操作结果
-#     """
-#     try:
-#         storage_service = StorageService()
-#         result = storage_service.delete(memory_id)
-        
-#         return json.dumps(result, indent=2, ensure_ascii=False)
-#     except Exception as e:
-#         return f"Error deleting memory: {str(e)}"
-
-
-def create_starlette_app(mcp_server: Server, *, debug: bool = False) -> Starlette:
-    """创建一个可以通过 SSE 服务提供的 MCP 服务器的 Starlette 应用程序"""
-    sse = SseServerTransport("/messages/")
-
-    async def handle_sse(request: Request) -> None:
-        """处理 SSE 连接"""
-        async with sse.connect_sse(
-                request.scope,
-                request.receive,
-                request._send,  # noqa: SLF001
-        ) as (read_stream, write_stream):
-            await mcp_server.run(
-                read_stream,
-                write_stream,
-                mcp_server.create_initialization_options(),
-            )
-
-    return Starlette(
-        debug=debug,
-        routes=[
-            Route("/sse", endpoint=handle_sse),
-            Mount("/messages/", app=sse.handle_post_message),
-        ],
-    )
-
-
 if __name__ == "__main__":
-    mcp_server = mcp._mcp_server
-
     import argparse
 
-    parser = argparse.ArgumentParser(description='运行基于 SSE 的 MCP 服务器')
-    parser.add_argument('--host', default='0.0.0.0', help='绑定的主机地址')
+    parser = argparse.ArgumentParser(description='运行基于 Streamable HTTP 的 MCP 服务器')
+    parser.add_argument('--host', default='127.0.0.1', help='绑定的主机地址')  # 改为默认本地地址
     parser.add_argument('--port', type=int, default=1234, help='监听的端口')
+    parser.add_argument('--log-level', default='info', help='日志级别')
     args = parser.parse_args()
 
-    # 将 SSE 请求处理绑定到 MCP 服务器
-    starlette_app = create_starlette_app(mcp_server, debug=True)
-
-    uvicorn.run(starlette_app, host=args.host, port=args.port)
+    # 使用 Streamable HTTP 传输运行服务器
+    # 根据 FastMCP 文档，正确的参数格式
+    mcp.run(
+        transport="streamable-http",  # 或者使用 "http" 作为别名
+        host=args.host,
+        port=args.port,
+        log_level=args.log_level
+    )
