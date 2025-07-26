@@ -1,294 +1,327 @@
-# Transports
 
-<div id="enable-section-numbers" />
+FastMCP Cloud is here! Join the beta.
+FastMCP 云服务已上线！加入测试版。
 
-<Info>**Protocol Revision**: 2025-06-18</Info>
+FastMCP home pageFastMCP
 
-MCP uses JSON-RPC to encode messages. JSON-RPC messages **MUST** be UTF-8 encoded.
+Search the docs...  搜索文档...
+⌘K
+jlowin/fastmcp
+15,255
 
-The protocol currently defines two standard transport mechanisms for client-server
-communication:
+Documentation
+  文档
+SDK Reference
+  SDK 参考
+Documentation
+  文档
+What's New
+  新功能
+Community
+  社区
+Get Started  开始使用
+Welcome!  欢迎！
+Installation  安装
+Quickstart  快速入门
+Servers  服务器
+Essentials  基础
+Overview  概述
+Running the Server  运行服务器
+Core Components  核心组件
+Advanced Features  高级功能
+Authentication  认证
+Clients  客户端
+Essentials  基础
+Core Operations  核心操作
+Advanced Features  高级功能
+Authentication
+Integrations
+Anthropic API
+ChatGPT
+NEW
+Claude Code
+NEW
+Claude Desktop
+Cursor
+NEW
+Eunomia Auth
+NEW
+FastAPI
+Gemini SDK
+MCP JSON
+NEW
+OpenAI API
+NEW
+OpenAPI
+Permit.io Permissions
+NEW
+Starlette / ASGI
+Patterns
+Tool Transformation
+Decorating Methods
+HTTP Requests
+Testing
+CLI
+Contrib Modules
+Tutorials
+What is MCP?
+Creating an MCP Server
+Connect LLMs to REST APIs
+Essentials  基础
+Running Your FastMCP Server
+运行您的 FastMCP 服务器
+Learn how to run and deploy your FastMCP server using various transport protocols like STDIO, Streamable HTTP, and SSE.
+学习如何使用 STDIO、Streamable HTTP 和 SSE 等多种传输协议来运行和部署你的 FastMCP 服务器。
 
-1. [stdio](#stdio), communication over standard in and standard out
-2. [Streamable HTTP](#streamable-http)
+FastMCP servers can be run in different ways depending on your application’s needs, from local command-line tools to persistent web services. This guide covers the primary methods for running your server, focusing on the available transport protocols: STDIO, Streamable HTTP, and SSE.
+FastMCP 服务器可以根据你的应用需求以不同的方式运行，从本地命令行工具到持久的 Web 服务。本指南涵盖了运行服务器的主要方法，重点介绍了可用的传输协议：STDIO、Streamable HTTP 和 SSE。
+​
+The run() Method   run() 方法
+FastMCP servers can be run directly from Python by calling the run() method on a FastMCP instance.
+FastMCP 服务器可以直接通过在 run() 实例上调用 FastMCP 方法来运行。
+For maximum compatibility, it’s best practice to place the run() call within an if __name__ == "__main__": block. This ensures the server starts only when the script is executed directly, not when imported as a module.
+为了最大兼容性，最佳实践是将 run() 调用放在 if __name__ == "__main__": 块内。这确保服务器仅在脚本直接执行时启动，而不是作为模块导入时。
+my_server.py
 
-Clients **SHOULD** support stdio whenever possible.
+Copy  复制
+from fastmcp import FastMCP
 
-It is also possible for clients and servers to implement
-[custom transports](#custom-transports) in a pluggable fashion.
+mcp = FastMCP(name="MyServer")
 
-## stdio
+@mcp.tool
+def hello(name: str) -> str:
+    return f"Hello, {name}!"
 
-In the **stdio** transport:
+if __name__ == "__main__":
+    mcp.run()
+You can now run this MCP server by executing python my_server.py.
+现在可以通过执行 python my_server.py 来运行这个 MCP 服务器。
+MCP servers can be run with a variety of different transport options, depending on your application’s requirements. The run() method can take a transport argument and other transport-specific keyword arguments to configure how the server operates.
+MCP 服务器可以根据应用程序的需求使用多种不同的传输选项来运行。 run() 方法可以接受 transport 参数和其他传输特定的关键字参数来配置服务器的运行方式。
+​
+The FastMCP CLI  FastMCP 命令行界面
+FastMCP also provides a command-line interface for running servers without modifying the source code. After installing FastMCP, you can run your server directly from the command line:
+FastMCP 还提供了一个命令行界面，用于在不修改源代码的情况下运行服务器。安装 FastMCP 后，您可以直接从命令行运行您的服务器：
 
-* The client launches the MCP server as a subprocess.
-* The server reads JSON-RPC messages from its standard input (`stdin`) and sends messages
-  to its standard output (`stdout`).
-* Messages are individual JSON-RPC requests, notifications, or responses.
-* Messages are delimited by newlines, and **MUST NOT** contain embedded newlines.
-* The server **MAY** write UTF-8 strings to its standard error (`stderr`) for logging
-  purposes. Clients **MAY** capture, forward, or ignore this logging.
-* The server **MUST NOT** write anything to its `stdout` that is not a valid MCP message.
-* The client **MUST NOT** write anything to the server's `stdin` that is not a valid MCP
-  message.
+Copy  复制
+fastmcp run server.py
+Important: When using fastmcp run, it ignores the if __name__ == "__main__" block entirely. Instead, it looks for a FastMCP object named mcp, server, or app and calls its run() method directly with the transport options you specify.
+重要提示：在使用 fastmcp run 时，它会完全忽略 if __name__ == "__main__" 块。相反，它会查找名为 mcp 、 server 或 app 的 FastMCP 对象，并直接使用您指定的传输选项调用其 run() 方法。
+This means you can use fastmcp run to override the transport specified in your code, which is particularly useful for testing or changing deployment methods without modifying the code.
+这意味着您可以使用 fastmcp run 来覆盖代码中指定的传输方式，这对于测试或更改部署方法而不修改代码特别有用。
+You can specify transport options and other configuration:
+您可以指定传输选项和其他配置：
 
-```mermaid
-sequenceDiagram
-    participant Client
-    participant Server Process
+Copy  复制
+fastmcp run server.py --transport sse --port 9000
+​
+Dependency Management with CLI
+使用 CLI 进行依赖管理
+When using the FastMCP CLI, you can pass additional options to configure how uv runs your server:
+在使用 FastMCP CLI 时，您可以传递额外的选项来配置 uv 如何运行您的服务器：
 
-    Client->>+Server Process: Launch subprocess
-    loop Message Exchange
-        Client->>Server Process: Write to stdin
-        Server Process->>Client: Write to stdout
-        Server Process--)Client: Optional logs on stderr
-    end
-    Client->>Server Process: Close stdin, terminate subprocess
-    deactivate Server Process
-```
+Copy  复制
+# Run with a specific Python version
+fastmcp run server.py --python 3.11
 
-## Streamable HTTP
+# Run with additional packages
+fastmcp run server.py --with pandas --with numpy
 
-<Info>
-  This replaces the [HTTP+SSE
-  transport](/specification/2024-11-05/basic/transports#http-with-sse) from
-  protocol version 2024-11-05. See the [backwards compatibility](#backwards-compatibility)
-  guide below.
-</Info>
+# Run with dependencies from a requirements file
+fastmcp run server.py --with-requirements requirements.txt
 
-In the **Streamable HTTP** transport, the server operates as an independent process that
-can handle multiple client connections. This transport uses HTTP POST and GET requests.
-Server can optionally make use of
-[Server-Sent Events](https://en.wikipedia.org/wiki/Server-sent_events) (SSE) to stream
-multiple server messages. This permits basic MCP servers, as well as more feature-rich
-servers supporting streaming and server-to-client notifications and requests.
+# Combine multiple options
+fastmcp run server.py --python 3.10 --with httpx --transport http
 
-The server **MUST** provide a single HTTP endpoint path (hereafter referred to as the
-**MCP endpoint**) that supports both POST and GET methods. For example, this could be a
-URL like `https://example.com/mcp`.
+# Run within a specific project directory
+fastmcp run server.py --project /path/to/project
+When using --python, --with, --project, or --with-requirements, the server runs via uv run subprocess instead of using your local environment. The uv command will manage dependencies based on your project configuration.
+在使用 --python 、 --with 、 --project 或 --with-requirements 时，服务器将通过 uv run 子进程运行，而不是使用您的本地环境。 uv 命令将根据您的项目配置管理依赖项。
+The --python option is particularly useful when you need to run a server with a specific Python version that differs from your system’s default. This addresses common compatibility issues where servers require a particular Python version to function correctly.
+--python 选项在你需要运行一个与系统默认版本不同的特定 Python 版本的服务器时特别有用。这解决了常见的兼容性问题，即服务器需要特定的 Python 版本才能正常运行。
+For development and testing, you can use the dev command to run your server with the MCP Inspector:
+在开发和测试中，你可以使用 dev 命令通过 MCP 检查器运行你的服务器：
 
-#### Security Warning
+Copy  复制
+fastmcp dev server.py
+The dev command also supports the same dependency management options:
+dev 命令也支持相同的依赖管理选项：
 
-When implementing Streamable HTTP transport:
+Copy  复制
+# Dev server with specific Python version and packages
+fastmcp dev server.py --python 3.11 --with pandas
+See the CLI documentation for detailed information about all available commands and options.
+请参阅 CLI 文档，以获取有关所有可用命令和选项的详细信息。
+​
+Passing Arguments to Servers
+将参数传递给服务器
+When servers accept command line arguments (using argparse, click, or other libraries), you can pass them after --:
+当服务器接受命令行参数（使用 argparse、click 或其他库）时，您可以在 -- 之后传递它们：
 
-1. Servers **MUST** validate the `Origin` header on all incoming connections to prevent DNS rebinding attacks
-2. When running locally, servers **SHOULD** bind only to localhost (127.0.0.1) rather than all network interfaces (0.0.0.0)
-3. Servers **SHOULD** implement proper authentication for all connections
+Copy  复制
+fastmcp run config_server.py -- --config config.json
+fastmcp run database_server.py -- --database-path /tmp/db.sqlite --debug
+This is useful for servers that need configuration files, database paths, API keys, or other runtime options.
+这对于需要配置文件、数据库路径、API 密钥或其他运行时选项的服务器很有用。
+​
+Transport Options  传输选项
+Below is a comparison of available transport options to help you choose the right one for your needs:
+以下是可用传输选项的比较，以帮助您为您的需求选择正确的选项：
+Transport  传输	Use Cases  用例	Recommendation  建议
+STDIO	Local tools, command-line scripts, and integrations with clients like Claude Desktop
+本地工具、命令行脚本以及与类似 Claude Desktop 的客户端集成	Best for local tools and when clients manage server processes
+适用于本地工具和客户端管理服务器进程的情况
+Streamable HTTP  可流式传输的 HTTP	Web-based deployments, microservices, exposing MCP over a network
+基于网络的部署、微服务、通过网络暴露 MCP	Recommended choice for web-based deployments
+基于 Web 的部署的推荐选择
+SSE	Existing web-based deployments that rely on SSE
+依赖 SSE 的现有基于 Web 的部署	Deprecated - prefer Streamable HTTP for new projects
+已弃用 - 新项目请优先使用 Streamable HTTP
+​
+STDIO
+The STDIO transport is the default and most widely compatible option for local MCP server execution. It is ideal for local tools, command-line integrations, and clients like Claude Desktop. However, it has the disadvantage of having to run the MCP code locally, which can introduce security concerns with third-party servers.
+STDIO 传输是本地 MCP 服务器执行时的默认且最广泛兼容的选项。它非常适合本地工具、命令行集成以及像 Claude 桌面这样的客户端。然而，它的缺点是需要本地运行 MCP 代码，这可能会引入与第三方服务器相关的安全问题。
+STDIO is the default transport, so you don’t need to specify it when calling run(). However, you can specify it explicitly to make your intent clear:
+stdio 是默认的传输方式，所以在调用 run() 时无需指定。不过，你也可以明确指定它，以便清楚地表达你的意图：
 
-Without these protections, attackers could use DNS rebinding to interact with local MCP servers from remote websites.
+Copy  复制
+from fastmcp import FastMCP
 
-### Sending Messages to the Server
+mcp = FastMCP()
 
-Every JSON-RPC message sent from the client **MUST** be a new HTTP POST request to the
-MCP endpoint.
+if __name__ == "__main__":
+    mcp.run(transport="stdio")
+When using Stdio transport, you will typically not run the server yourself as a separate process. Rather, your clients will spin up a new server process for each session. As such, no additional configuration is required.
+在使用 Stdio 传输时，通常不会将服务器作为单独进程自行运行。相反，您的客户端将为每个会话启动一个新的服务器进程。因此，无需进行额外配置。
+​
+Streamable HTTP  可流式传输的 HTTP
+New in version: 2.3.0
+Streamable HTTP is a modern, efficient transport for exposing your MCP server via HTTP. It is the recommended transport for web-based deployments.
+Streamable HTTP 是一种现代、高效的传输方式，用于通过 HTTP 暴露您的 MCP 服务器。它是基于 Web 部署的推荐传输方式。
+To run a server using Streamable HTTP, you can use the run() method with the transport argument set to "http". This will start a Uvicorn server on the default host (127.0.0.1), port (8000), and path (/mcp/).
+要使用 Streamable HTTP 运行服务器，您可以使用 run() 方法，并将 transport 参数设置为 "http" 。这将启动一个 Uvicorn 服务器，在默认主机（ 127.0.0.1 ）、端口（ 8000 ）和路径（ /mcp/ ）上运行。
 
-1. The client **MUST** use HTTP POST to send JSON-RPC messages to the MCP endpoint.
-2. The client **MUST** include an `Accept` header, listing both `application/json` and
-   `text/event-stream` as supported content types.
-3. The body of the POST request **MUST** be a single JSON-RPC *request*, *notification*, or *response*.
-4. If the input is a JSON-RPC *response* or *notification*:
-   * If the server accepts the input, the server **MUST** return HTTP status code 202
-     Accepted with no body.
-   * If the server cannot accept the input, it **MUST** return an HTTP error status code
-     (e.g., 400 Bad Request). The HTTP response body **MAY** comprise a JSON-RPC *error
-     response* that has no `id`.
-5. If the input is a JSON-RPC *request*, the server **MUST** either
-   return `Content-Type: text/event-stream`, to initiate an SSE stream, or
-   `Content-Type: application/json`, to return one JSON object. The client **MUST**
-   support both these cases.
-6. If the server initiates an SSE stream:
-   * The SSE stream **SHOULD** eventually include JSON-RPC *response* for the
-     JSON-RPC *request* sent in the POST body.
-   * The server **MAY** send JSON-RPC *requests* and *notifications* before sending the
-     JSON-RPC *response*. These messages **SHOULD** relate to the originating client
-     *request*.
-   * The server **SHOULD NOT** close the SSE stream before sending the JSON-RPC *response*
-     for the received JSON-RPC *request*, unless the [session](#session-management)
-     expires.
-   * After the JSON-RPC *response* has been sent, the server **SHOULD** close the SSE
-     stream.
-   * Disconnection **MAY** occur at any time (e.g., due to network conditions).
-     Therefore:
-     * Disconnection **SHOULD NOT** be interpreted as the client cancelling its request.
-     * To cancel, the client **SHOULD** explicitly send an MCP `CancelledNotification`.
-     * To avoid message loss due to disconnection, the server **MAY** make the stream
-       [resumable](#resumability-and-redelivery).
+server.py
 
-### Listening for Messages from the Server
+client.py
 
-1. The client **MAY** issue an HTTP GET to the MCP endpoint. This can be used to open an
-   SSE stream, allowing the server to communicate to the client, without the client first
-   sending data via HTTP POST.
-2. The client **MUST** include an `Accept` header, listing `text/event-stream` as a
-   supported content type.
-3. The server **MUST** either return `Content-Type: text/event-stream` in response to
-   this HTTP GET, or else return HTTP 405 Method Not Allowed, indicating that the server
-   does not offer an SSE stream at this endpoint.
-4. If the server initiates an SSE stream:
-   * The server **MAY** send JSON-RPC *requests* and *notifications* on the stream.
-   * These messages **SHOULD** be unrelated to any concurrently-running JSON-RPC
-     *request* from the client.
-   * The server **MUST NOT** send a JSON-RPC *response* on the stream **unless**
-     [resuming](#resumability-and-redelivery) a stream associated with a previous client
-     request.
-   * The server **MAY** close the SSE stream at any time.
-   * The client **MAY** close the SSE stream at any time.
+Copy  复制
+from fastmcp import FastMCP
 
-### Multiple Connections
+mcp = FastMCP()
 
-1. The client **MAY** remain connected to multiple SSE streams simultaneously.
-2. The server **MUST** send each of its JSON-RPC messages on only one of the connected
-   streams; that is, it **MUST NOT** broadcast the same message across multiple streams.
-   * The risk of message loss **MAY** be mitigated by making the stream
-     [resumable](#resumability-and-redelivery).
+if __name__ == "__main__":
+    mcp.run(transport="http")
+For backward compatibility, wherever "http" is accepted as a transport name, you can also pass "streamable-http" as a fully supported alias. This is particularly useful when upgrading from FastMCP 1.x in the official Python SDK and FastMCP <= 2.9, where "streamable-http" was the standard name.
+为了向后兼容，在所有接受 "http" 作为传输名称的地方，你也可以传递 "streamable-http" 作为完全支持的别名。这在从官方 Python SDK 和 FastMCP <= 2.9 升级到 FastMCP 1.x 时特别有用，当时 "streamable-http" 是标准名称。
+To customize the host, port, path, or log level, provide appropriate keyword arguments to the run() method.
+要自定义主机、端口、路径或日志级别，请向 run() 方法提供适当的命名关键字参数。
 
-### Resumability and Redelivery
+server.py
 
-To support resuming broken connections, and redelivering messages that might otherwise be
-lost:
+client.py
 
-1. Servers **MAY** attach an `id` field to their SSE events, as described in the
-   [SSE standard](https://html.spec.whatwg.org/multipage/server-sent-events.html#event-stream-interpretation).
-   * If present, the ID **MUST** be globally unique across all streams within that
-     [session](#session-management)—or all streams with that specific client, if session
-     management is not in use.
-2. If the client wishes to resume after a broken connection, it **SHOULD** issue an HTTP
-   GET to the MCP endpoint, and include the
-   [`Last-Event-ID`](https://html.spec.whatwg.org/multipage/server-sent-events.html#the-last-event-id-header)
-   header to indicate the last event ID it received.
-   * The server **MAY** use this header to replay messages that would have been sent
-     after the last event ID, *on the stream that was disconnected*, and to resume the
-     stream from that point.
-   * The server **MUST NOT** replay messages that would have been delivered on a
-     different stream.
+Copy  复制
+from fastmcp import FastMCP
 
-In other words, these event IDs should be assigned by servers on a *per-stream* basis, to
-act as a cursor within that particular stream.
+mcp = FastMCP()
 
-### Session Management
+if __name__ == "__main__":
+    mcp.run(
+        transport="http",
+        host="127.0.0.1",
+        port=4200,
+        path="/my-custom-path",
+        log_level="debug",
+    )
+​
+SSE
+The SSE transport is deprecated and may be removed in a future version. New applications should use Streamable HTTP transport instead.
+SSE 传输方式已弃用，未来版本中可能会被移除。新应用应使用流式 HTTP 传输方式替代。
+Server-Sent Events (SSE) is an HTTP-based protocol for server-to-client streaming. While FastMCP still supports SSE, it is deprecated and Streamable HTTP is preferred for new projects.
+服务器端事件（SSE）是一种基于 HTTP 的服务器到客户端流协议。虽然 FastMCP 仍然支持 SSE，但它已过时，新项目应优先使用可流式传输 HTTP。
+To run a server using SSE, you can use the run() method with the transport argument set to "sse". This will start a Uvicorn server on the default host (127.0.0.1), port (8000), and with default SSE path (/sse/) and message path (/messages/).
+要使用 SSE 运行服务器，可以使用 run() 方法，并将 transport 参数设置为 "sse" 。这将启动一个 Uvicorn 服务器，在默认主机（ 127.0.0.1 ）、端口（ 8000 ）以及默认 SSE 路径（ /sse/ ）和消息路径（ /messages/ ）上运行。
 
-An MCP "session" consists of logically related interactions between a client and a
-server, beginning with the [initialization phase](/specification/2025-06-18/basic/lifecycle). To support
-servers which want to establish stateful sessions:
+server.py
 
-1. A server using the Streamable HTTP transport **MAY** assign a session ID at
-   initialization time, by including it in an `Mcp-Session-Id` header on the HTTP
-   response containing the `InitializeResult`.
-   * The session ID **SHOULD** be globally unique and cryptographically secure (e.g., a
-     securely generated UUID, a JWT, or a cryptographic hash).
-   * The session ID **MUST** only contain visible ASCII characters (ranging from 0x21 to
-     0x7E).
-2. If an `Mcp-Session-Id` is returned by the server during initialization, clients using
-   the Streamable HTTP transport **MUST** include it in the `Mcp-Session-Id` header on
-   all of their subsequent HTTP requests.
-   * Servers that require a session ID **SHOULD** respond to requests without an
-     `Mcp-Session-Id` header (other than initialization) with HTTP 400 Bad Request.
-3. The server **MAY** terminate the session at any time, after which it **MUST** respond
-   to requests containing that session ID with HTTP 404 Not Found.
-4. When a client receives HTTP 404 in response to a request containing an
-   `Mcp-Session-Id`, it **MUST** start a new session by sending a new `InitializeRequest`
-   without a session ID attached.
-5. Clients that no longer need a particular session (e.g., because the user is leaving
-   the client application) **SHOULD** send an HTTP DELETE to the MCP endpoint with the
-   `Mcp-Session-Id` header, to explicitly terminate the session.
-   * The server **MAY** respond to this request with HTTP 405 Method Not Allowed,
-     indicating that the server does not allow clients to terminate sessions.
+client.py
 
-### Sequence Diagram
+Copy  复制
+from fastmcp import FastMCP
 
-```mermaid
-sequenceDiagram
-    participant Client
-    participant Server
+mcp = FastMCP()
 
-    note over Client, Server: initialization
+if __name__ == "__main__":
+    mcp.run(transport="sse")
+Notice that the client in the above example uses an explicit SSETransport to connect to the server. FastMCP will attempt to infer the appropriate transport from the provided configuration, but HTTP URLs are assumed to be Streamable HTTP (as of FastMCP 2.3.0).
+请注意，上述示例中的客户端使用显式的 SSETransport 连接到服务器。FastMCP 将尝试从提供的配置中推断适当的传输方式，但自 FastMCP 2.3.0 起，HTTP URL 假定为可流式传输的 HTTP。
+To customize the host, port, or log level, provide appropriate keyword arguments to the run() method. You can also adjust the SSE path (which clients should connect to) and the message POST endpoint (which clients use to send subsequent messages).
+要自定义主机、端口或日志级别，请向 run() 方法提供适当的命名参数。您还可以调整 SSE 路径（客户端应连接的路径）和消息 POST 端点（客户端用于发送后续消息的端点）。
 
-    Client->>+Server: POST InitializeRequest
-    Server->>-Client: InitializeResponse<br>Mcp-Session-Id: 1868a90c...
+server.py
+  
 
-    Client->>+Server: POST InitializedNotification<br>Mcp-Session-Id: 1868a90c...
-    Server->>-Client: 202 Accepted
+client.py
+  
 
-    note over Client, Server: client requests
-    Client->>+Server: POST ... request ...<br>Mcp-Session-Id: 1868a90c...
+Copy  复制
+from fastmcp import FastMCP
 
-    alt single HTTP response
-      Server->>Client: ... response ...
-    else server opens SSE stream
-      loop while connection remains open
-          Server-)Client: ... SSE messages from server ...
-      end
-      Server-)Client: SSE event: ... response ...
-    end
-    deactivate Server
+mcp = FastMCP()
 
-    note over Client, Server: client notifications/responses
-    Client->>+Server: POST ... notification/response ...<br>Mcp-Session-Id: 1868a90c...
-    Server->>-Client: 202 Accepted
+if __name__ == "__main__":
+    mcp.run(
+        transport="sse",
+        host="127.0.0.1",
+        port=4200,
+        log_level="debug",
+        path="/my-custom-sse-path",
+    )
+​
+Async Usage  
+FastMCP provides both synchronous and asynchronous APIs for running your server. The run() method seen in previous examples is a synchronous method that internally uses anyio.run() to run the asynchronous server. For applications that are already running in an async context, FastMCP provides the run_async() method.  
 
-    note over Client, Server: server requests
-    Client->>+Server: GET<br>Mcp-Session-Id: 1868a90c...
-    loop while connection remains open
-        Server-)Client: ... SSE messages from server ...
-    end
-    deactivate Server
+Copy  复制
+from fastmcp import FastMCP
+import asyncio
 
-```
+mcp = FastMCP(name="MyServer")
 
-### Protocol Version Header
+@mcp.tool
+def hello(name: str) -> str:
+    return f"Hello, {name}!"
 
-If using HTTP, the client **MUST** include the `MCP-Protocol-Version: <protocol-version>` HTTP header on all subsequent requests to the MCP
-server, allowing the MCP server to respond based on the MCP protocol version.
+async def main():
+    # Use run_async() in async contexts
+    await mcp.run_async(transport="http")
 
-For example: `MCP-Protocol-Version: 2025-06-18`
+if __name__ == "__main__":
+    asyncio.run(main())
+The run() method cannot be called from inside an async function because it already creates its own async event loop internally. If you attempt to call run() from inside an async function, you’ll get an error about the event loop already running.  
+Always use run_async() inside async functions and run() in synchronous contexts.  
+Both run() and run_async() accept the same transport arguments, so all the examples above apply to both methods.  
+​
+Custom Routes  
+You can also add custom web routes to your FastMCP server, which will be exposed alongside the MCP endpoint. To do so, use the @custom_route decorator. Note that this is less flexible than using a full ASGI framework, but can be useful for adding simple endpoints like health checks to your standalone server.  
 
-The protocol version sent by the client **SHOULD** be the one [negotiated during
-initialization](/specification/2025-06-18/basic/lifecycle#version-negotiation).
+Copy  复制
+from fastmcp import FastMCP
+from starlette.requests import Request
+from starlette.responses import PlainTextResponse
 
-For backwards compatibility, if the server does *not* receive an `MCP-Protocol-Version`
-header, and has no other way to identify the version - for example, by relying on the
-protocol version negotiated during initialization - the server **SHOULD** assume protocol
-version `2025-03-26`.
+mcp = FastMCP("MyServer")
 
-If the server receives a request with an invalid or unsupported
-`MCP-Protocol-Version`, it **MUST** respond with `400 Bad Request`.
+@mcp.custom_route("/health", methods=["GET"])
+async def health_check(request: Request) -> PlainTextResponse:
+    return PlainTextResponse("OK")
 
-### Backwards Compatibility
+if __name__ == "__main__":
+    mcp.run()
+Overview  概述
+Tools  工具
+bluesky
+github
+x
+Powered by Mintlify  由 Mintlify 提供技术支持
 
-Clients and servers can maintain backwards compatibility with the deprecated [HTTP+SSE
-transport](/specification/2024-11-05/basic/transports#http-with-sse) (from
-protocol version 2024-11-05) as follows:
-
-**Servers** wanting to support older clients should:
-
-* Continue to host both the SSE and POST endpoints of the old transport, alongside the
-  new "MCP endpoint" defined for the Streamable HTTP transport.
-  * It is also possible to combine the old POST endpoint and the new MCP endpoint, but
-    this may introduce unneeded complexity.
-
-**Clients** wanting to support older servers should:
-
-1. Accept an MCP server URL from the user, which may point to either a server using the
-   old transport or the new transport.
-2. Attempt to POST an `InitializeRequest` to the server URL, with an `Accept` header as
-   defined above:
-   * If it succeeds, the client can assume this is a server supporting the new Streamable
-     HTTP transport.
-   * If it fails with an HTTP 4xx status code (e.g., 405 Method Not Allowed or 404 Not
-     Found):
-     * Issue a GET request to the server URL, expecting that this will open an SSE stream
-       and return an `endpoint` event as the first event.
-     * When the `endpoint` event arrives, the client can assume this is a server running
-       the old HTTP+SSE transport, and should use that transport for all subsequent
-       communication.
-
-## Custom Transports
-
-Clients and servers **MAY** implement additional custom transport mechanisms to suit
-their specific needs. The protocol is transport-agnostic and can be implemented over any
-communication channel that supports bidirectional message exchange.
-
-Implementers who choose to support custom transports **MUST** ensure they preserve the
-JSON-RPC message format and lifecycle requirements defined by MCP. Custom transports
-**SHOULD** document their specific connection establishment and message exchange patterns
-to aid interoperability.

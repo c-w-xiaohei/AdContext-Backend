@@ -1,0 +1,36 @@
+version: '3.8'
+
+services:
+  adcontext-backend:
+    build:
+      context: .
+      dockerfile: Dockerfile
+    container_name: adcontext-backend
+    ports:
+      - "8080:8080"
+    environment:
+      - MEM0_API_KEY=${MEM0_API_KEY}
+      - AIHUBMIX_API_KEY=${AIHUBMIX_API_KEY}
+      - PYTHONPATH=/app
+    env_file:
+      - .env
+    volumes:
+      # 开发模式下挂载代码目录（可选）
+      - .:/app
+    restart: unless-stopped
+    networks:
+      - adcontext-network
+    healthcheck:
+      test: ["CMD", "curl", "-f", "http://localhost:8080/health"]
+      interval: 30s
+      timeout: 10s
+      retries: 3
+      start_period: 40s
+
+networks:
+  adcontext-network:
+    driver: bridge
+
+volumes:
+  adcontext-data:
+    driver: local

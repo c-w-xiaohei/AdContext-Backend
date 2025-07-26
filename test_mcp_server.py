@@ -3,7 +3,7 @@
 """
 FastMCP 服务器测试脚本
 
-测试运行在 http://127.0.0.1:1234/mcp/ 的 AD-Context MCP 服务器
+测试运行在 http://127.0.0.1:8080/mcp/ 的 AD-Context MCP 服务器
 包含初始化、添加记忆和搜索记忆功能的完整测试，以及隐私数据监测与区块链存储测试
 """
 
@@ -18,7 +18,7 @@ from schemas.common import Metadata
 class MCPServerTester:
     """MCP 服务器测试类"""
     
-    def __init__(self, base_url: str = "http://127.0.0.1:1234/mcp/"):
+    def __init__(self, base_url: str = "https://advx-1.zeabur.app/mcp/"):
         """初始化测试器
         
         参数:
@@ -281,7 +281,7 @@ class MCPServerTester:
 async def main():
     """主函数"""
     print("FastMCP 服务器测试工具")
-    print("确保服务器正在运行在 http://127.0.0.1:1234/mcp/")
+    print("确保服务器正在运行在 http://localhost:8080/mcp/")
     print()
     
     # 创建测试器并运行测试

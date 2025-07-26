@@ -904,7 +904,7 @@ if __name__ == "__main__":
 
     parser = argparse.ArgumentParser(description='运行MCP服务器')
     parser.add_argument('--host', default='127.0.0.1', help='绑定的主机地址（默认localhost以提高安全性）')
-    parser.add_argument('--port', type=int, default=1234, help='监听的端口')
+    parser.add_argument('--port', type=int, default=8080, help='监听的端口')
     parser.add_argument('--transport', choices=['sse', 'streamable'], default='streamable', 
                        help='传输协议类型: sse (传统SSE) 或 streamable (现代Streamable HTTP)')
     args = parser.parse_args()

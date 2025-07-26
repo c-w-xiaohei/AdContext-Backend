@@ -202,6 +202,33 @@ class ContextWSEndpoint(WebSocketEndpoint):
     async def on_disconnect(self, websocket, close_code):
         websocket_manager.disconnect()
 
+# 添加健康检查和根路径重定向端点
+@mcp.custom_route("/health", methods=["GET"])
+async def health_check(request):
+    """健康检查端点
+    
+    返回:
+        PlainTextResponse: 服务器状态信息
+    """
+    from starlette.responses import PlainTextResponse
+    return PlainTextResponse("OK")
+
+@mcp.custom_route("/", methods=["GET"])
+async def root_redirect(request):
+    """根路径重定向到MCP端点信息
+    
+    返回:
+        JSONResponse: MCP服务器信息
+    """
+    from starlette.responses import JSONResponse
+    return JSONResponse({
+        "name": "AD-Context MCP Server",
+        "version": "1.0.0",
+        "mcp_endpoint": "/mcp/",
+        "health_endpoint": "/health",
+        "status": "running"
+    })
+
 def create_starlette_app() -> Starlette:
     
     # 获取 FastMCP 的 ASGI 应用，并将其路径设置为根 ("/")
@@ -222,10 +249,10 @@ if __name__ == "__main__":
 
     parser = argparse.ArgumentParser(description='运行MCP和WebSocket服务器')
     parser.add_argument('--host', default='0.0.0.0', help='绑定的主机地址')  # 改为默认本地地址
-    parser.add_argument('--port', type=int, default=1234, help='监听的端口')
+    parser.add_argument('--port', type=int, default=8080, help='监听的端口')
     parser.add_argument('--log-level', default='info', help='日志级别')
     args = parser.parse_args()
-
+    
     # 不再直接运行mcp服务器，而是将其集成到Starlette应用中
     # mcp.run(
     #     transport="streamable-http",  # 或者使用 "http" 作为别名

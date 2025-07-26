@@ -58,7 +58,7 @@ from privacy import PrivacyClassifier
 classifier = PrivacyClassifier()
 
 # 直接对文本进行隐私分级
-text = "用户身份证号：110101199001011234，银行卡号：6228482188888888888"
+text = "用户身份证号：110101199001018080，银行卡号：6228482188888888888"
 privacy_label = classifier.classify(text)
 
 print(f"隐私级别: {privacy_label.level.value}级")
