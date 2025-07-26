@@ -8,7 +8,7 @@ from services.websocket import WebSocketManager
 from schemas.websocket import OperationResultPayload
 import uuid
 
-class StorageService:
+class  StorageService:
     """
     存储服务层
     职责：作为mem0库的直接封装，提供干净、类型化的数据访问接口。
@@ -23,32 +23,6 @@ class StorageService:
         self.use_local_fallback = False
         self.local_storage = None
         
-        # 测试 Mem0 连接
-        self._test_mem0_connection()
-    
-    def _test_mem0_connection(self):
-        """测试 Mem0 API 连接，如果失败则启用本地存储"""
-        try:
-            # 尝试一个简单的操作来测试连接
-            test_messages = [{"role": "user", "content": "connection_test"}]
-            self.storage.add(
-                test_messages,
-                user_id="test_connection",
-                output_format="v1.1"
-            )
-            print("✅ Mem0 API 连接成功")
-            self.use_local_fallback = False
-        except Exception as e:
-            print(f"⚠️  Mem0 API 连接失败，启用本地存储: {str(e)}")
-            self.use_local_fallback = True
-            # 延迟导入本地存储以避免循环依赖
-            try:
-                from storage.local_storage import LocalStorageService
-                self.local_storage = LocalStorageService()
-                print("✅ 本地存储已启用")
-            except Exception as local_error:
-                print(f"❌ 本地存储初始化失败: {str(local_error)}")
-
     async def add(self, text: str , metadata: Metadata,privacy_brief:Optional[str] = None) -> str:
         """
         向存储中添加一个上下文片段。

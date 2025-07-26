@@ -18,6 +18,8 @@ import uvicorn
 
 load_dotenv()
 
+storage_service = StorageService(websocket_manager)
+
 # Initialize FastMCP server for mem0 tools
 mcp = FastMCP("AD-Context")
 
@@ -69,7 +71,7 @@ async def add_memory(text: str) -> str:
             source="user_input"
         )
         
-        result = await StorageService(websocket_manager).add(text, metadata,privacy_label.brief)
+        result = await storage_service.add(text, metadata,privacy_label.brief)
         return result
     except Exception as e:
         return f"Error adding memory: {str(e)}"
@@ -114,7 +116,6 @@ async def search_memory(query_text: str, top_k: int = 5) -> str:
         # <time>:search_start - 开始搜索记忆
         print(f"<time>:search_start - 开始搜索记忆，查询: {query_text}")
         
-        storage_service = StorageService(websocket_manager)
         results = storage_service.search(query_text, top_k=top_k)
         
         # <time>:search_complete - 搜索完成
