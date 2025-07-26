@@ -49,7 +49,6 @@ class StorageService:
             
             if is_privacy:
                 # 隐私流
-                self.websocket.send_json()
                  # 1. 生成一个唯一的请求ID
                 request_id = str(uuid.uuid4())
 

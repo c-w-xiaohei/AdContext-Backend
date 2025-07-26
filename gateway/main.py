@@ -3,9 +3,10 @@ from mem0 import MemoryClient
 from dotenv import load_dotenv
 import json
 from gateway.prompt import CUSTOM_INSTRUCTIONS  # 修改为绝对导入
+from gateway.blockchain import request_blockchain_data
 
 from storage.service import StorageService
-
+from services.privacy.privacy_classifier import PrivacyClassifier
 # websocket
 import json
 from starlette.applications import Starlette
@@ -28,25 +29,22 @@ DEFAULT_USER_ID = "trae_user"
 mem0_client.update_project(custom_instructions=CUSTOM_INSTRUCTIONS)
 
 @mcp.tool(
-    description="""将用户记忆添加到 AD-Context 中。此工具存储用户的个人信息、偏好、习惯、学习与知识偏好、认知模式与沟通风格、历史互动与核心记忆。
-    
-    功能特性：
-    - 支持语义索引和检索
-    - 自动推理和提取关键信息
-    - 支持隐私级别控制
-    - 支持元数据标记
-    
-    存储每个记忆时，您应包括：
-    - 个人信息（姓名、年龄、性别、地区、职业、教育背景等）
-    - 偏好（色彩偏好、设计风格、时尚/穿衣风格、音乐品味、阅读偏好等）
-    - 习惯（作息规律、生活习惯、工作习惯、运动习惯等）
-    - 学习与知识偏好（学习方式、特别感兴趣的知识主题、技能水平等）
-    - 认知模式与沟通风格（思维模式、沟通风格、决策方式、问题解决方法等）
-    - 历史互动与核心记忆（关键对话与共识、重要事件、里程碑等）
-    - 目标与计划（短期目标、长期规划、项目计划等）
-    
-    该记忆将被索引以进行语义搜索，并可稍后使用自然语言查询进行检索。
-    支持的隐私级别：LEVEL_1_PUBLIC（公开）、LEVEL_2_INTERNAL（内部）、LEVEL_3_CONFIDENTIAL（机密）、LEVEL_4_RESTRICTED（限制）、LEVEL_5_TOP_SECRET（绝密）。
+    description="""**核心指令：**
+这是你与用户交互的记忆接口。在任何与用户的互动中，当你获取到关于用户的新信息，或当你判断一段有意义的对话已经结束且有记录价值时，你**必须**主动调用此工具，将关键信息和上下文进行结构化存储。
+
+**执行目标：**
+调用此工具的目的是为了在未来的对话中提供连贯、个性化且深刻的体验。你记录的信息将被用于语义索引和检索，让你能随时回忆起用户的偏好和历史。
+
+**记录维度指引：**
+当你执行记录时，应评估并捕获以下维度的信息（当信息在对话中出现时）：
+
+*   **身份与背景 (Personal Info):** 用户的基本信息，如姓名、职业、地理位置等。
+*   **个人偏好 (Preferences):** 审美、品味和选择倾向，如喜欢的颜色、音乐风格、阅读主题等。
+*   **行为模式 (Habits):** 用户的常规行为，如作息、工作习惯、沟通节奏等。
+*   **认知与学习 (Cognition & Learning):** 用户的思维方式、知识领域、学习偏好和技能水平。
+*   **核心记忆 (Core Memories):** 对用户意义重大的事件、达成的关键共识、重要的历史互动。
+*   **未来意图 (Goals & Plans):** 用户的短期目标、长期规划或特定愿景。
+*   以及其他的值得记录的信息。
     """
 )
 async def add_memory(text: str) -> str:
@@ -65,45 +63,38 @@ async def add_memory(text: str) -> str:
         from schemas.privacy import PrivacyLevel
         
         # 创建默认的元数据
+        privacy_label = PrivacyClassifier().classify(text)
         metadata = Metadata(
-            privacy_level=PrivacyLevel.LEVEL_1_PUBLIC,
+            privacy_level=privacy_label.level,
             source="user_input"
         )
         
-        result = StorageService().add(text, metadata)
+        result = await StorageService(websocket_manager).add(text, metadata,privacy_label.brief)
         return result
     except Exception as e:
         return f"Error adding memory: {str(e)}"
 
 
 @mcp.tool(
-    description="""使用语义搜索在 AD-Context 中搜索已存储的记忆。此工具能够根据查询文本找到最相关的记忆片段。
-    
-    功能特性：
-    - 基于语义理解的智能搜索
-    - 支持自然语言查询
-    - 可配置返回结果数量
-    - 支持元数据过滤
-    - 返回相关性评分
-    
-    适用场景：
-    - 查找特定的个人信息或偏好
-    - 搜索相关的历史对话或事件
-    - 检索特定主题的知识和经验
-    - 查找相似的习惯或行为模式
-    - 搜索特定时间段或来源的记忆
-    
-    搜索支持：
-    - 模糊匹配和语义理解
-    - 多关键词组合查询
-    - 上下文相关性分析
-    - 同义词和相关概念匹配
-    
-    返回结果包含：
-    - 匹配的记忆内容
-    - 相关性评分
-    - 元数据信息（隐私级别、来源等）
-    - 创建时间等附加信息
+    description="""**核心指令：**
+在你与用户进行任何对话之前或之中，当你需要回忆用户的历史信息、偏好或过往共识以构建上下文时，你**必须**主动调用此工具进行查询。
+
+**战略目标：**
+你的首要目标是**主动**利用用户的历史记忆，让每一次对话都具有连续性和深度。通过检索过去的信息，你能够更好地理解用户的当前意图，提供高度个性化的回应，从而极大地提升用户的对话体验。这不仅仅是被动查找，更是**主动构建情境**的关键步骤。
+
+**调用时机指引 (Invocation Triggers):**
+在以下情况，你应该优先考虑调用此工具：
+
+*   **对话启动时 (Conversation Grounding):** 在开启新话题前，快速检索相关背景，确保对话建立在已知共识之上。
+*   **个性化需求 (Personalization):** 当用户请求建议、推荐或寻求个性化方案时，检索其相关偏好与习惯。
+*   **信息确认与关联 (Contextual Linking):** 当用户提及一个可能与历史信息相关的关键词（如项目、人物、地点、观点）时，立即查询以建立联系。
+*   **理解深层意图 (Deepening Understanding):** 当用户表达模糊或复杂的需求时，检索过往的沟通模式和目标，以更准确地把握其意图。
+
+**操作要点与能力 (Operational Points & Capabilities):**
+*   **以自然语言查询：** 直接用对话的方式进行提问。工具的语义理解能力会匹配最相关的记忆，你无需构造复杂的关键词。
+*   **信赖语义匹配：** 工具能够理解上下文、同义词和相关概念。你可以放心进行模糊或宽泛的查询。
+*   **利用相关性评分：** 返回结果会包含相关性分数，利用这个分数来判断检索到的记忆与当前对话的贴合程度。
+*   **按需使用元数据：** 当需要更精确的查找时（例如特定时间段或主题），可利用元数据进行过滤。
     """
 )
 async def search_memory(query_text: str, top_k: int = 5) -> str:
@@ -123,11 +114,23 @@ async def search_memory(query_text: str, top_k: int = 5) -> str:
         # <time>:search_start - 开始搜索记忆
         print(f"<time>:search_start - 开始搜索记忆，查询: {query_text}")
         
-        storage_service = StorageService()
+        storage_service = StorageService(websocket_manager)
         results = storage_service.search(query_text, top_k=top_k)
         
         # <time>:search_complete - 搜索完成
         print(f"<time>:search_complete - 搜索完成，找到 {len(results)} 个结果")
+        
+        # 获取并更新区块链数据
+        for result in results:
+            if result.metadata and result.metadata.blockchain_data_id:
+                print(f"<time>:blockchain_fetch_start - 开始为ID {result.metadata.blockchain_data_id} 获取区块链数据")
+                try:
+                    blockchain_context = await request_blockchain_data(result.metadata.blockchain_data_id)
+                    if blockchain_context:
+                        result.context = blockchain_context
+                    print(f"<time>:blockchain_fetch_complete - ID {result.metadata.blockchain_data_id} 的区块链数据获取完成")
+                except Exception as e:
+                    print(f"<time>:blockchain_fetch_error - 获取ID {result.metadata.blockchain_data_id} 的区块链数据时出错: {e}")
         
         # 转换为JSON格式
         formatted_results = []
@@ -201,12 +204,18 @@ class ContextWSEndpoint(WebSocketEndpoint):
 
 def create_starlette_app() -> Starlette:
     
+    # 获取 FastMCP 的 ASGI 应用，并将其路径设置为根 ("/")
+    # 这样 FastMCP 应用本身就不关心它的挂载点了
+    mcp_asgi_app = mcp.http_app(transport="streamable-http", path="/")
+
     return Starlette(routes=[
             # 添加WebSocket路由
             WebSocketRoute("/ws", endpoint=ContextWSEndpoint),
-            # 挂载FastMCP应用
-            Mount("/mcp", app=mcp),
+            # 将 FastMCP 应用挂载到 /mcp 路径
+            Mount("/mcp", app=mcp_asgi_app),
         ],
+        # 关键修复：将 mcp 应用的生命周期管理传递给主应用
+        lifespan=mcp_asgi_app.lifespan
     )
 if __name__ == "__main__":
     import argparse
@@ -227,21 +236,3 @@ if __name__ == "__main__":
     
     starlette_app = create_starlette_app()
     uvicorn.run(starlette_app, host=args.host, port=args.port, log_level=args.log_level)
-
-@app.websocket_route("/ws")
-class WebSocketChat(WebSocketEndpoint):
-    async def on_connect(self, websocket):
-        await websocket_manager.connect(websocket)
-
-    async def on_receive(self, websocket, data):
-        await websocket_manager.broadcast(f"Client message: {data}")
-
-    async def on_disconnect(self, websocket, close_code):
-        websocket_manager.disconnect(websocket)
-
-if __name__ == "__main__":
-    mcp.run(
-        transport="http",
-        host="0.0.0.0",
-        port=8000,
-    )

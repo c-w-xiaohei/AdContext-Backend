@@ -4,13 +4,15 @@
 FastMCP 服务器测试脚本
 
 测试运行在 http://127.0.0.1:1234/mcp/ 的 AD-Context MCP 服务器
-包含初始化、添加记忆和搜索记忆功能的完整测试
+包含初始化、添加记忆和搜索记忆功能的完整测试，以及隐私数据监测与区块链存储测试
 """
 
 import asyncio
 import json
 from fastmcp.client import Client
 from fastmcp.client.transports import StreamableHttpTransport
+from schemas.privacy import PrivacyLevel
+from schemas.common import Metadata
 
 
 class MCPServerTester:
@@ -104,6 +106,10 @@ class MCPServerTester:
                 
                 for i, result in enumerate(search_results.get('raw_results', [])[:2]):
                     print(f"   结果 {i+1}: {result.get('content', '')[:80]}... (评分: {result.get('score', 0):.3f})")
+                    if 'metadata' in result and 'privacy_level' in result['metadata']:
+                        print(f"   隐私级别: {result['metadata']['privacy_level']}")
+                    if 'blockchain_data_id' in result.get('metadata', {}):
+                        print(f"   区块链数据ID: {result['metadata']['blockchain_data_id']}")
                 
                 return True
             except json.JSONDecodeError:
@@ -112,6 +118,59 @@ class MCPServerTester:
                 
         except Exception as e:
             print(f"❌ 搜索记忆失败: {e}")
+            return False
+            
+    async def test_privacy_classification(self, text: str) -> bool:
+        """测试隐私分类功能
+        
+        参数:
+            text: 要分类的文本
+            
+        返回:
+            bool: 分类是否成功
+        """
+        print(f"🔄 测试隐私分类: {text[:50]}...")
+        
+        try:
+            # 这里假设有一个隐私分类的工具，如果没有，需要直接调用PrivacyClassifier
+            # 这里使用add_memory的返回值来推断隐私级别
+            result = await self.client.call_tool(
+                "add_memory",
+                arguments={"text": text}
+            )
+            
+            print(f"✅ 隐私分类测试完成: {result.content[0].text if result.content else 'No content'}")
+            return True
+        except Exception as e:
+            print(f"❌ 隐私分类测试失败: {e}")
+            return False
+            
+    async def test_blockchain_storage(self, sensitive_text: str) -> bool:
+        """测试区块链存储功能
+        
+        参数:
+            sensitive_text: 敏感信息文本
+            
+        返回:
+            bool: 存储是否成功
+        """
+        print(f"🔄 测试区块链存储: {sensitive_text[:50]}...")
+        
+        try:
+            # 添加一条明显包含敏感信息的记忆
+            result = await self.client.call_tool(
+                "add_memory",
+                arguments={"text": sensitive_text}
+            )
+            
+            print(f"✅ 区块链存储测试添加完成: {result.content[0].text if result.content else 'No content'}")
+            
+            # 搜索这条记忆，检查是否被存储在区块链上
+            search_result = await self.test_search_memory(sensitive_text[:30])
+            
+            return search_result
+        except Exception as e:
+            print(f"❌ 区块链存储测试失败: {e}")
             return False
     
     async def run_full_test(self) -> None:
@@ -153,6 +212,62 @@ class MCPServerTester:
                 ]
                 
                 for query in test_queries:
+                    await self.test_search_memory(query)
+                    await asyncio.sleep(0.5)
+                
+                # 测试隐私数据监测与存储
+                print("\n" + "=" * 60)
+                print("🔒 开始隐私数据监测与存储测试")
+                print("=" * 60)
+                
+                # 测试不同隐私级别的数据
+                privacy_test_data = [
+                    # 公开级别 (LEVEL_1_PUBLIC)
+                    "我喜欢在周末去公园散步，这是一个公开的爱好。",
+                    
+                    # 内部级别 (LEVEL_2_INTERNAL)
+                    "我们团队正在开发一个新的AI助手项目，项目代号为'星辰'。",
+                    
+                    # 机密级别 (LEVEL_3_CONFIDENTIAL)
+                    "我的邮箱密码是abc123456，请不要告诉任何人。",
+                    
+                    # 限制级别 (LEVEL_4_RESTRICTED)
+                    "我的银行卡号是6225880137751234，密码是123456。",
+                    
+                    # 绝密级别 (LEVEL_5_TOP_SECRET)
+                    "公司服务器的root密码是R00t@2023!，数据库连接字符串是'postgres://admin:secret@db.example.com:5432/maindb'。"
+                ]
+                
+                for i, test_data in enumerate(privacy_test_data):
+                    print(f"\n测试数据 {i+1}：预期隐私级别 {i+1}")
+                    await self.test_privacy_classification(test_data)
+                    await asyncio.sleep(1)
+                
+                # 测试区块链存储
+                print("\n" + "=" * 60)
+                print("⛓️ 开始区块链存储测试")
+                print("=" * 60)
+                
+                blockchain_test_data = [
+                    "这是一条包含我的身份证号码330102199001011234的敏感信息，应该被存储到区块链上。",
+                    "这是另一条包含银行信息的数据：我的招商银行账号是6225887654321098，密码是888666。"
+                ]
+                
+                for test_data in blockchain_test_data:
+                    await self.test_blockchain_storage(test_data)
+                    await asyncio.sleep(1)
+                    
+                # 测试区块链数据检索
+                print("\n" + "=" * 60)
+                print("🔍 测试区块链数据检索")
+                print("=" * 60)
+                
+                blockchain_queries = [
+                    "我的身份证号码是什么？",
+                    "我的银行账号信息"
+                ]
+                
+                for query in blockchain_queries:
                     await self.test_search_memory(query)
                     await asyncio.sleep(0.5)
                     
