@@ -2,7 +2,7 @@ import os
 from datetime import datetime
 from typing import Optional, List
 import json
-import requests
+from openai import OpenAI
 
 from schemas.privacy import PrivacyLevel, PrivacyLabel
 
@@ -113,23 +113,30 @@ class PrivacyClassifier:
     """隐私分级分类器"""
     
     def __init__(self, api_key: Optional[str] = None, 
-                 model_name: str = "gemini-2.5-flash-lite"):
+                 model_name: Optional[str] = None,
+                 api_url: Optional[str] = None):
         """
         初始化隐私分类器
         
         Args:
-            api_key (str, optional): AiHubMix API密钥. 如果未提供，将从环境变量 AIHUBMIX_API_KEY 读取.
-            model_name (str): 使用的模型名称，默认为gemini-2.5-flash-lite
+            api_key (str, optional): OpenAI API密钥. 如果未提供，将从环境变量 OPENAI_API_KEY 读取.
+            model_name (str, optional): 使用的模型名称. 如果未提供，将从环境变量 OPENAI_MODEL_NAME 读取.
+            api_url (str, optional): API服务地址. 如果未提供，将从环境变量 OPENAI_BASE_URL 读取.
         """
         self.classification_prompt = PRIVACY_CLASSIFICATION_PROMPT
         
-        resolved_api_key = api_key or os.environ.get("AIHUBMIX_API_KEY")
+        resolved_api_key = api_key or os.environ.get("OPENAI_API_KEY")
         if not resolved_api_key:
-            raise ValueError("AiHubMix API Key not provided. Please pass it as an argument or set the AIHUBMIX_API_KEY environment variable.")
+            raise ValueError("OpenAI API Key not provided. Please pass it as an argument or set the OPENAI_API_KEY environment variable.")
             
-        self.api_key = resolved_api_key
-        self.model_name = model_name
-        self.api_url = "https://aihubmix.com/v1/chat/completions"
+        self.model_name = model_name or os.environ.get("OPENAI_MODEL_NAME", "gpt-3.5-turbo")
+        base_url = api_url or os.environ.get("OPENAI_BASE_URL")
+        
+        # 初始化OpenAI客户端
+        if base_url:
+            self.client = OpenAI(api_key=resolved_api_key, base_url=base_url)
+        else:
+            self.client = OpenAI(api_key=resolved_api_key)
     
     def get_classification_prompt(self, context_fragment: str, additional_context: Optional[str] = None) -> str:
         """
@@ -170,7 +177,7 @@ class PrivacyClassifier:
     
     def _call_ai(self, prompt: str) -> dict:
         """
-        调用AiHubMix的Gemini模型
+        调用OpenAI模型
         
         Args:
             prompt (str): 发送给AI的提示词
@@ -181,29 +188,20 @@ class PrivacyClassifier:
         Raises:
             Exception: API调用失败时抛出异常
         """
-        headers = {
-            'Authorization': f'Bearer {self.api_key}',
-            'Content-Type': 'application/json'
-        }
-        
-        data = {
-            "model": self.model_name,
-            "messages": [
-                {
-                    "role": "user",
-                    "content": prompt
-                }
-            ],
-            "temperature": 0.1,  # 降低随机性，提高分类一致性
-            "max_tokens": 1000
-        }
-        
         try:
-            response = requests.post(self.api_url, headers=headers, json=data, timeout=30)
-            response.raise_for_status()
+            response = self.client.chat.completions.create(
+                model=self.model_name,
+                messages=[
+                    {
+                        "role": "user",
+                        "content": prompt
+                    }
+                ],
+                temperature=0.1,  # 降低随机性，提高分类一致性
+                max_tokens=1000
+            )
             
-            result = response.json()
-            ai_content = result['choices'][0]['message']['content']
+            ai_content = response.choices[0].message.content
             
             # 尝试解析AI返回的JSON
             try:
@@ -226,8 +224,8 @@ class PrivacyClassifier:
                     "compliance_notes": None
                 }
                 
-        except requests.exceptions.RequestException as e:
-            raise Exception(f"API调用失败: {str(e)}")
+        except Exception as e:
+            raise Exception(f"OpenAI API调用失败: {str(e)}")
     
     def classify(self, context_fragment: str, additional_context: Optional[str] = None) -> PrivacyLabel:
         """
