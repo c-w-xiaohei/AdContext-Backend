@@ -5,10 +5,9 @@ FilterService使用示例
 """
 
 from .filter_service import FilterService
-from .models import FilteredResult
 import time
 
-
+ 
 def example_basic_usage():
     """基础使用示例"""
     print("🔍 FilterService基础使用示例")
@@ -40,18 +39,20 @@ def example_basic_usage():
     print("\n⏳ 正在进行上下文筛选和整理...")
     
     # 执行筛选
+    start_time = time.time()
     result = filter_service.filter_contexts(user_question, candidate_contexts)
+    end_time = time.time()
     
     # 显示结果
     print(f"\n✅ 筛选完成！")
     print(f"📄 整理后的上下文:")
-    print(f"「{result.filtered_contexts}」")
+    print(f"「{result}」")
     
     # 显示统计信息
-    stats = filter_service.get_statistics(result)
-    print(f"\n📈 筛选统计:")
-    for key, value in stats.items():
-        print(f"  • {key}: {value}")
+    print(f"\n📈 处理统计:")
+    print(f"  • 原始上下文数量: {len(candidate_contexts)}")
+    print(f"  • 筛选后内容长度: {len(result)}字符")
+    print(f"  • 处理耗时: {end_time - start_time:.2f}秒")
 
 
 def example_empty_contexts():
@@ -66,11 +67,13 @@ def example_empty_contexts():
     print(f"📝 用户问题: {user_question}")
     print(f"📊 候选上下文数量: {len(candidate_contexts)}")
     
+    start_time = time.time()
     result = filter_service.filter_contexts(user_question, candidate_contexts)
+    end_time = time.time()
     
     print(f"✅ 处理结果:")
-    print(f"  • 筛选后上下文: '{result.filtered_contexts}'")
-    print(f"  • 处理耗时: {result.processing_time:.3f}秒")
+    print(f"  • 筛选后上下文: '{result}'")
+    print(f"  • 处理耗时: {end_time - start_time:.3f}秒")
 
 
 def example_low_relevance_contexts():
@@ -95,16 +98,18 @@ def example_low_relevance_contexts():
     print(f"📝 用户问题: {user_question}")
     print(f"📊 候选上下文数量: {len(candidate_contexts)}")
     
+    start_time = time.time()
     result = filter_service.filter_contexts(user_question, candidate_contexts)
+    end_time = time.time()
     
     print(f"\n✅ 筛选结果:")
     print(f"📄 整理后的上下文:")
-    print(f"「{result.filtered_contexts}」")
+    print(f"「{result}」")
     
-    stats = filter_service.get_statistics(result)
     print(f"\n📈 筛选效果:")
-    for key, value in stats.items():
-        print(f"  • {key}: {value}")
+    print(f"  • 原始上下文数量: {len(candidate_contexts)}")
+    print(f"  • 筛选后内容长度: {len(result)}字符")
+    print(f"  • 处理耗时: {end_time - start_time:.2f}秒")
 
 
 def example_custom_threshold():
@@ -128,16 +133,18 @@ def example_custom_threshold():
     print(f"🎯 相关性阈值: {filter_service.relevance_threshold}")
     print(f"📊 候选上下文数量: {len(candidate_contexts)}")
     
+    start_time = time.time()
     result = filter_service.filter_contexts(user_question, candidate_contexts)
+    end_time = time.time()
     
     print(f"\n✅ 高阈值筛选结果:")
     print(f"📄 整理后的上下文:")
-    print(f"「{result.filtered_contexts}」")
+    print(f"「{result}」")
     
-    stats = filter_service.get_statistics(result)
     print(f"\n📈 筛选统计:")
-    for key, value in stats.items():
-        print(f"  • {key}: {value}")
+    print(f"  • 原始上下文数量: {len(candidate_contexts)}")
+    print(f"  • 筛选后内容长度: {len(result)}字符")
+    print(f"  • 处理耗时: {end_time - start_time:.2f}秒")
 
 
 def example_performance_test():
@@ -173,6 +180,7 @@ def example_performance_test():
     # 测试多次以获得平均性能
     total_time = 0
     test_runs = 3
+    final_result = ""
     
     print(f"\n⏱️ 进行{test_runs}次测试...")
     
@@ -183,13 +191,14 @@ def example_performance_test():
         
         run_time = end_time - start_time
         total_time += run_time
+        final_result = result
         
-        print(f"  第{i+1}次: {run_time:.2f}秒 (筛选出{result.filtered_count}个上下文)")
+        print(f"  第{i+1}次: {run_time:.2f}秒 (结果长度: {len(result)}字符)")
     
     avg_time = total_time / test_runs
     print(f"\n📊 性能统计:")
     print(f"  • 平均处理时间: {avg_time:.2f}秒")
-    print(f"  • 最终整理结果: 「{result.filtered_contexts[:100]}...」")
+    print(f"  • 最终整理结果: 「{final_result[:100]}...」")
 
 
 if __name__ == "__main__":
@@ -218,4 +227,4 @@ if __name__ == "__main__":
         print(f"\n❌ 示例运行出错: {str(e)}")
         print("请检查API配置是否正确。")
     
-    print("=" * 80) 
+    print("=" * 80)

@@ -106,21 +106,30 @@ async def add_memory(text: str) -> str:
 async def search_memory(query_text: str, top_k: int = 5) -> str:
     """在 AD-Context 中搜索记忆
     
-    使用语义搜索技术在已存储的记忆中查找与查询最相关的内容。
+    使用语义搜索技术在已存储的记忆中查找与查询最相关的内容，
+    并通过AI过滤器筛选出最有用的信息。
     
     参数：
         query_text: 搜索查询文本，支持自然语言描述
         top_k: 返回最相似结果的数量，默认为5
     
     返回：
-        str: JSON格式的搜索结果，包含匹配的记忆内容、相关性评分和元数据
+        str: JSON格式的搜索结果，包含过滤后的相关内容和原始匹配结果
     """
     try:
+        # <time>:search_start - 开始搜索记忆
+        print(f"<time>:search_start - 开始搜索记忆，查询: {query_text}")
+        
         storage_service = StorageService()
         results = storage_service.search(query_text, top_k=top_k)
         
-        # 转换为JSON格式返回
+        # <time>:search_complete - 搜索完成
+        print(f"<time>:search_complete - 搜索完成，找到 {len(results)} 个结果")
+        
+        # 转换为JSON格式
         formatted_results = []
+        candidate_contexts = []  # 用于过滤的候选上下文
+        
         for result in results:
             formatted_result = {
                 "content": result.context,
@@ -131,9 +140,45 @@ async def search_memory(query_text: str, top_k: int = 5) -> str:
                 }
             }
             formatted_results.append(formatted_result)
+            candidate_contexts.append(result.context)
         
-        return json.dumps(formatted_results, indent=2, ensure_ascii=False)
+        # <time>:filter_start - 开始过滤搜索结果
+        print("<time>:filter_start - 开始使用FilterService过滤搜索结果")
+        
+        # 使用FilterService过滤搜索结果
+        filtered_content = ""
+        if candidate_contexts:
+            try:
+                from services.filter.filter_service import FilterService
+                filter_service = FilterService()
+                filtered_content = filter_service.filter_contexts(query_text, candidate_contexts)
+                
+                # <time>:filter_complete - 过滤完成
+                print(f"<time>:filter_complete - 过滤完成，过滤后内容长度: {len(filtered_content)}")
+                
+            except Exception as filter_error:
+                # <time>:filter_error - 过滤过程出错
+                print(f"<time>:filter_error - 过滤过程出错: {str(filter_error)}")
+                # 如果过滤失败，继续返回原始结果
+                pass
+        
+        # 构建最终响应
+        response_data = {
+            "filtered_summary": filtered_content,  # AI过滤后的摘要
+            "raw_results": formatted_results,      # 原始搜索结果
+            "query": query_text,
+            "total_found": len(results),
+            "has_filtered_content": bool(filtered_content)
+        }
+        
+        # <time>:response_ready - 响应准备完成
+        print("<time>:response_ready - 搜索和过滤完成，准备返回结果")
+        
+        return json.dumps(response_data, indent=2, ensure_ascii=False)
+        
     except Exception as e:
+        # <time>:search_error - 搜索过程出错
+        print(f"<time>:search_error - 搜索过程出错: {str(e)}")
         return f"Error searching memories: {str(e)}"
 
 
@@ -216,23 +261,23 @@ async def search_memory(query_text: str, top_k: int = 5) -> str:
 #     """
 # )
 # async def delete_memory(memory_id: str) -> str:
-    """从 AD-Context 中删除指定记忆
+#     """从 AD-Context 中删除指定记忆
     
-    根据记忆ID永久删除指定的记忆内容。
+#     根据记忆ID永久删除指定的记忆内容。
     
-    参数：
-        memory_id: 要删除的记忆的唯一标识符
+#     参数：
+#         memory_id: 要删除的记忆的唯一标识符
     
-    返回：
-        str: JSON格式的删除操作结果
-    """
-    try:
-        storage_service = StorageService()
-        result = storage_service.delete(memory_id)
+#     返回：
+#         str: JSON格式的删除操作结果
+#     """
+#     try:
+#         storage_service = StorageService()
+#         result = storage_service.delete(memory_id)
         
-        return json.dumps(result, indent=2, ensure_ascii=False)
-    except Exception as e:
-        return f"Error deleting memory: {str(e)}"
+#         return json.dumps(result, indent=2, ensure_ascii=False)
+#     except Exception as e:
+#         return f"Error deleting memory: {str(e)}"
 
 
 def create_starlette_app(mcp_server: Server, *, debug: bool = False) -> Starlette:
