@@ -4,19 +4,23 @@ from typing import List, Dict, Any, Optional
 from storage.db import client
 from mem0 import MemoryClient
 import os
+from services.websocket import WebSocketManager
+from schemas.websocket import OperationResultPayload
+import uuid
 
 class StorageService:
     """
     存储服务层
     职责：作为mem0库的直接封装，提供干净、类型化的数据访问接口。
     """
-    def __init__(self):
+    def __init__(self,websocket_manager:WebSocketManager):
         """初始化存储服务"""
         self.storage = MemoryClient()
+        self.websocket = websocket_manager
         self.DEFAULT_USER_ID = "adventureX"
         self.api_key = os.getenv("MEM0_API_KEY")
 
-    def add(self, text: str , metadata: Metadata) -> str:
+    async def add(self, text: str , metadata: Metadata,privacy_brief:Optional[str] = None) -> str:
         """
         向mem0中添加一个上下文片段。
 
@@ -28,24 +32,65 @@ class StorageService:
             str: 存入mem0后返回的操作结果消息。
         """
         try:
-            messages = [{"role": "user", "content": text}]
+            
+            is_privacy:bool = metadata.privacy_level.value >= 3
+            if is_privacy:
+                messages = [{"role": "user", "content": privacy_brief}]
+            else:
+                 messages = [{"role": "user", "content": text}]
             
             # 将 Metadata 对象转换为字典格式
+            
             metadata_dict = {
                 "privacy_level": metadata.privacy_level.value,  # 获取枚举的值
                 "source": metadata.source
             }
             
-            result = self.storage.add(
-                messages, 
-                user_id=self.DEFAULT_USER_ID, 
-                output_format="v1.1", 
-                metadata=metadata_dict, # 传递字典而不是对象
-                infer = True
-            )
             
-            print(result)
-            # 返回添加成功的消息，包含memory字段
+            if is_privacy:
+                # 隐私流
+                self.websocket.send_json()
+                 # 1. 生成一个唯一的请求ID
+                request_id = str(uuid.uuid4())
+
+                # 2. 向前端发送上链请求
+                await self.websocket.send_json({
+                    "type": "REQUEST_ONCHAIN_STORAGE",
+                    "requestId": request_id,
+                    "payload": {
+                        # 将需要加密的完整数据发给前端
+                        "dataToStore": text 
+                    }
+                })
+
+                # 3. 异步等待前端的响应
+                print(f"[后端] 等待前端响应请求: {request_id}")
+                response: OperationResultPayload = await self.websocket.wait_for_response(request_id)
+
+                # 4. 处理前端返回的结果
+                if response and response.get("success"):
+                    blockchain_data_id = request_id
+                    
+                    metadata_dict["blockchain_data_id"] = blockchain_data_id
+                    
+                    self.storage.add(
+                        messages, 
+                        user_id=self.DEFAULT_USER_ID, 
+                        output_format="v1.1", 
+                        metadata=metadata_dict, # 传递字典而不是对象
+                        infer = True
+                    )
+                messages = [{"role": "user", "content": privacy_brief}]
+                    
+            else:
+                result = self.storage.add(
+                    messages, 
+                    user_id=self.DEFAULT_USER_ID, 
+                    output_format="v1.1", 
+                    metadata=metadata_dict, # 传递字典而不是对象
+                    infer = True
+                )
+            
             msg = "ad-context记忆成功"
             return msg
         except Exception as e:

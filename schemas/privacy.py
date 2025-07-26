@@ -18,6 +18,6 @@ class PrivacyLabel:
     """隐私标签数据结构"""
     level: PrivacyLevel
     confidence: float           # 置信度 (0.0-1.0)
-    reasoning: str              # 分级理由
+    brief: str              # 摘要
     risk_indicators: List[str]  # 风险指标
     compliance_notes: Optional[str] = None  # 合规注释

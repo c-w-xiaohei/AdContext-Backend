@@ -6,6 +6,15 @@ from gateway.prompt import CUSTOM_INSTRUCTIONS  # 修改为绝对导入
 
 from storage.service import StorageService
 
+# websocket
+import json
+from starlette.applications import Starlette
+from starlette.routing import Mount, WebSocketRoute
+from starlette.endpoints import WebSocketEndpoint
+from services.websocket import websocket_manager
+import uvicorn
+
+
 load_dotenv()
 
 # Initialize FastMCP server for mem0 tools
@@ -174,22 +183,65 @@ async def search_memory(query_text: str, top_k: int = 5) -> str:
         # <time>:search_error - 搜索过程出错
         print(f"<time>:search_error - 搜索过程出错: {str(e)}")
         return f"Error searching memories: {str(e)}"
+    
+class ContextWSEndpoint(WebSocketEndpoint):
+    async def on_connect(self, websocket):
+        await websocket_manager.connect(websocket)
 
+    async def on_receive(self, websocket, data):
+        # 监听来自前端的响应
+        response = json.loads(data)
+        request_id = response.get("requestId")
+        if request_id:
+            # 解析等待中的请求
+            websocket_manager.resolve_request(request_id, response.get("payload"))
 
+    async def on_disconnect(self, websocket, close_code):
+        websocket_manager.disconnect()
+
+def create_starlette_app() -> Starlette:
+    
+    return Starlette(routes=[
+            # 添加WebSocket路由
+            WebSocketRoute("/ws", endpoint=ContextWSEndpoint),
+            # 挂载FastMCP应用
+            Mount("/mcp", app=mcp),
+        ],
+    )
 if __name__ == "__main__":
     import argparse
 
-    parser = argparse.ArgumentParser(description='运行基于 Streamable HTTP 的 MCP 服务器')
+    parser = argparse.ArgumentParser(description='运行MCP和WebSocket服务器')
     parser.add_argument('--host', default='0.0.0.0', help='绑定的主机地址')  # 改为默认本地地址
     parser.add_argument('--port', type=int, default=1234, help='监听的端口')
     parser.add_argument('--log-level', default='info', help='日志级别')
     args = parser.parse_args()
 
-    # 使用 Streamable HTTP 传输运行服务器
-    # 根据 FastMCP 文档，正确的参数格式
+    # 不再直接运行mcp服务器，而是将其集成到Starlette应用中
+    # mcp.run(
+    #     transport="streamable-http",  # 或者使用 "http" 作为别名
+    #     host=args.host,
+    #     port=args.port,
+    #     log_level=args.log_level
+    # )
+    
+    starlette_app = create_starlette_app()
+    uvicorn.run(starlette_app, host=args.host, port=args.port, log_level=args.log_level)
+
+@app.websocket_route("/ws")
+class WebSocketChat(WebSocketEndpoint):
+    async def on_connect(self, websocket):
+        await websocket_manager.connect(websocket)
+
+    async def on_receive(self, websocket, data):
+        await websocket_manager.broadcast(f"Client message: {data}")
+
+    async def on_disconnect(self, websocket, close_code):
+        websocket_manager.disconnect(websocket)
+
+if __name__ == "__main__":
     mcp.run(
-        transport="streamable-http",  # 或者使用 "http" 作为别名
-        host=args.host,
-        port=args.port,
-        log_level=args.log_level
+        transport="http",
+        host="0.0.0.0",
+        port=8000,
     )

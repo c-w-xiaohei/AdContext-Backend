@@ -50,7 +50,7 @@ PRIVACY_CLASSIFICATION_PROMPT = f"""你是一个专业的隐私数据分类专�
 {{
     "privacy_level": <1-5的整数>,
     "confidence": <0.0-1.0的浮点数，表示分类置信度>,
-    "reasoning": "<详细的分级理由，说明为什么选择此级别>",
+    "brief": "<在不泄露隐私的前提下，对这段隐私信息进行总结归纳>",
     "risk_indicators": ["<风险指标1>", "<风险指标2>", "..."],
     "compliance_notes": "<如适用，说明相关的法规要求>"
 }}
@@ -62,7 +62,7 @@ PRIVACY_CLASSIFICATION_PROMPT = f"""你是一个专业的隐私数据分类专�
 - 严格按照5级分类标准进行评估
 - 如果文本包含多种敏感度的信息，选择最高敏感度级别
 - 考虑信息组合可能产生的敏感度提升
-- 对于模糊情况，提供详细的reasoning说明判断依据
+- 对于模糊情况，提供详细的brief说明判断依据
 
 请分析以下上下文片段：
 """
@@ -156,14 +156,14 @@ class PrivacyClassifier:
         """
         privacy_level = PrivacyLevel(result.get("privacy_level", 1))
         confidence = float(result.get("confidence", 0.0))
-        reasoning = result.get("reasoning", "")
+        brief = result.get("brief", "")
         risk_indicators = result.get("risk_indicators", [])
         compliance_notes = result.get("compliance_notes")
         
         return PrivacyLabel(
             level=privacy_level,
             confidence=confidence,
-            reasoning=reasoning,
+            brief=brief,
             risk_indicators=risk_indicators,
             compliance_notes=compliance_notes
         )
@@ -221,7 +221,7 @@ class PrivacyClassifier:
                 return {
                     "privacy_level": 1,
                     "confidence": 0.0,
-                    "reasoning": f"AI返回格式解析失败: {ai_content}",
+                    "brief": f"AI返回格式解析失败: {ai_content}",
                     "risk_indicators": ["解析错误"],
                     "compliance_notes": None
                 }

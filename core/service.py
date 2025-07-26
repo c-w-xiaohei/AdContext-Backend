@@ -5,6 +5,7 @@ from services.privacy import PrivacyClassifier
 from services.filter import FilterService
 from services.authorization import AuthorizationService
 from typing import List
+from gateway.blockchain import request_blockchain_data
 
 class ContextCore:
     """
@@ -36,6 +37,11 @@ class ContextCore:
         
         threshold = 0.7  # 可以根据实际需求调整阈值
         filtered_res: List[RetriveResult] = [item for item in res if getattr(item, "score", 0) >= threshold]
+        
+        # 获取区块链数据
+        for item in filtered_res:
+            if item.metadata.blockchain_data_id:
+                item.context = await request_blockchain_data(item.metadata.blockchain_data_id)
         
         filtered_text = self.filter.filter_retrieved_context(text, filtered_res)
         
