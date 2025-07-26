@@ -35,9 +35,6 @@ class  StorageService:
         Returns:
             str: 存储后返回的操作结果消息。
         """
-        # 如果启用了本地存储降级
-        if self.use_local_fallback and self.local_storage:
-            return self.local_storage.add(text, metadata)
         
         # 尝试使用 Mem0
         try:
