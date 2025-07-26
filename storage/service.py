@@ -112,7 +112,7 @@ class StorageService:
                         user_id=self.DEFAULT_USER_ID, 
                         output_format="v1.1", 
                         metadata=metadata_dict, # 传递字典而不是对象
-                        infer = True
+                        infer = False
                     )
                 messages = [{"role": "user", "content": privacy_brief}]
                     
