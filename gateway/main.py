@@ -268,7 +268,7 @@ if __name__ == "__main__":
 
     parser = argparse.ArgumentParser(description='运行基于 SSE 的 MCP 服务器')
     parser.add_argument('--host', default='0.0.0.0', help='绑定的主机地址')
-    parser.add_argument('--port', type=int, default=8080, help='监听的端口')
+    parser.add_argument('--port', type=int, default=1234, help='监听的端口')
     args = parser.parse_args()
 
     # 将 SSE 请求处理绑定到 MCP 服务器
