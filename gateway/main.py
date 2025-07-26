@@ -180,7 +180,7 @@ if __name__ == "__main__":
     import argparse
 
     parser = argparse.ArgumentParser(description='运行基于 Streamable HTTP 的 MCP 服务器')
-    parser.add_argument('--host', default='127.0.0.1', help='绑定的主机地址')  # 改为默认本地地址
+    parser.add_argument('--host', default='0.0.0.0', help='绑定的主机地址')  # 改为默认本地地址
     parser.add_argument('--port', type=int, default=1234, help='监听的端口')
     parser.add_argument('--log-level', default='info', help='日志级别')
     args = parser.parse_args()
